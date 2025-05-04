@@ -15,6 +15,7 @@ class DataArguments:
 @dataclass
 class AdditionalTrainingArguments:
     batch_size: int = field(default=16, metadata={"help": "Batch size for training."})
+    lr: float = field(, metadata={"help": "Learning rate for training."})
     
 
 def build_dataset(split: str, max_samples: int, dataset: DatasetDict):
@@ -25,16 +26,21 @@ def build_dataset(split: str, max_samples: int, dataset: DatasetDict):
     return sub_set
 
 def train(data_args: DataArguments, training_args: TrainingArguments, dataset: DatasetDict):
-    train_dataset = build_dataset("train", data_args.max_train_samples, dataset)
-    eval_dataset = build_dataset("validation", data_args.max_eval_samples, dataset)
-
-    config = AutoConfig.from_pretrained('bert-base-uncased')
-
-    model = AutoModelForSequenceClassification.from_pretrained('bert-base-uncased', config=config)
-
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+    
+    def preprocess_function(examples):
+        return tokenizer(examples["sentence1"], examples["sentence2"], truncation=True)
+    
+    train_dataset = build_dataset("train", data_args.max_train_samples, dataset).map(preprocess_function, batched=True)
+    eval_dataset = build_dataset("validation", data_args.max_eval_samples, dataset).map(preprocess_function, batched=True)
 
-        
+    print(train_dataset[0])
+
+    model = AutoModelForSequenceClassification.from_pretrained('bert-base-uncased')
+
+    
+
+
 
 def predict():
     pass
