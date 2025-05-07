@@ -1,9 +1,16 @@
 from dataclasses import dataclass, field
+from transformers.trainer import Trainer
+from transformers.trainer_utils import EvalPrediction
 from transformers.hf_argparser import HfArgumentParser
 from transformers.training_args import TrainingArguments
-from transformers import AutoConfig, AutoTokenizer, AutoModelForSequenceClassification # type: ignore
-from datasets import load_dataset, DatasetDict, Dataset 
+from transformers import AutoTokenizer, AutoModelForSequenceClassification # type: ignore
+from transformers.data.data_collator import DataCollatorWithPadding
+from datasets import load_dataset, DatasetDict, Dataset
+import numpy as np
+import wandb
 
+wandb.login()
+wandb.init(project="ex1")
 
 @dataclass
 class DataArguments:
@@ -14,8 +21,8 @@ class DataArguments:
 
 @dataclass
 class AdditionalTrainingArguments:
+    lr: float = field(metadata={"help": "Learning rate for training."})
     batch_size: int = field(default=16, metadata={"help": "Batch size for training."})
-    lr: float = field(, metadata={"help": "Learning rate for training."})
     
 
 def build_dataset(split: str, max_samples: int, dataset: DatasetDict):
@@ -24,6 +31,11 @@ def build_dataset(split: str, max_samples: int, dataset: DatasetDict):
     else:
         sub_set = dataset[split]
     return sub_set
+
+def compute_metrics(p: EvalPrediction):
+    preds = np.argmax(p.predictions, axis=1)
+    return {"accuracy": (preds == p.label_ids).mean()}
+
 
 def train(data_args: DataArguments, training_args: TrainingArguments, dataset: DatasetDict):
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
@@ -34,12 +46,23 @@ def train(data_args: DataArguments, training_args: TrainingArguments, dataset: D
     train_dataset = build_dataset("train", data_args.max_train_samples, dataset).map(preprocess_function, batched=True)
     eval_dataset = build_dataset("validation", data_args.max_eval_samples, dataset).map(preprocess_function, batched=True)
 
-    print(train_dataset[0])
-
     model = AutoModelForSequenceClassification.from_pretrained('bert-base-uncased')
 
-    
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+        compute_metrics=compute_metrics,
+        data_collator=data_collator
+    )
+
+    train_result = trainer.train()
+    print(f"Training loss: {train_result.training_loss}")
+    print(f"Steps: {train_result.global_step}")
+    print(f"Metrics: {train_result.metrics}")
 
 
 def predict():
@@ -50,6 +73,13 @@ def main():
     training_args, data_args, additional_training_args = parser.parse_args_into_dataclasses()
 
     training_args.per_device_train_batch_size = additional_training_args.batch_size
+    training_args.learning_rate = additional_training_args.lr
+    training_args.report_to = "wandb"
+    training_args.logging_strategy = "steps"
+    training_args.logging_steps = 1
+    training_args.logging_dir = "./logs"
+
+
 
     dataset = load_dataset("nyu-mll/glue", "mrpc")
     
@@ -58,6 +88,8 @@ def main():
 
     if training_args.do_predict:
         predict()
+
+    wandb.finish()
 
 
 if __name__ == "__main__":

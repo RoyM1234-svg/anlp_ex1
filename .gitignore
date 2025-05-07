@@ -178,3 +178,5 @@ cython_debug/
 *.png
 test.py
 .vscode/
+wandb/
+trainer_output/
