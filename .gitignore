@@ -176,10 +176,12 @@ cython_debug/
 .DS_Store
 /res.txt
 /predictions.txt
-*.png
 test.py
 .vscode/
 wandb/
 trainer_output/
 saved_model/
 old/
+model_1/
+model_2/
+model_3/

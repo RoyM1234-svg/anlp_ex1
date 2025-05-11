@@ -87,6 +87,9 @@ def predict(
 
     model.eval()
 
+    correct = 0
+    total = 0
+
     str_to_write = ""
 
     with torch.no_grad():
@@ -95,11 +98,14 @@ def predict(
             outputs = model(**model_inputs)
             pred = torch.argmax(outputs.logits, dim=1).item()
             str_to_write += f"{sample['sentence1']}###{sample['sentence2']}###{pred}\n" # type: ignore
+            if pred == sample["label"]: # type: ignore
+                correct += 1
+            total += 1
 
     with open("predictions.txt", "w") as f:
         f.write(str_to_write)
 
-
+    return correct / total
 def main():
 
 
@@ -127,7 +133,8 @@ def main():
             f.write(f"epoch_num : {training_args.num_train_epochs}, lr : {additional_training_args.lr}, batch_size : {additional_training_args.batch_size}, eval_accuracy : {eval_accuracy}\n")
                     
     if training_args.do_predict:
-        predict(data_args, dataset) # type: ignore
+        accuracy = predict(data_args, dataset) # type: ignore
+        print(f"test accuracy : {accuracy}")
 
     wandb.finish()
 
