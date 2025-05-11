@@ -105,7 +105,7 @@ def main():
 
     parser = HfArgumentParser((TrainingArguments, DataArguments, AdditionalTrainingArguments)) # type: ignore
     training_args, data_args, additional_training_args = parser.parse_args_into_dataclasses()
-    wandb.init(project="ex1",
+    wandb.init(project="nlp_ex1",
                name=f"batch_size_{additional_training_args.batch_size}_lr_{additional_training_args.lr}",
                config = {
                 "batch_size": additional_training_args.batch_size,
