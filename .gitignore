@@ -174,10 +174,12 @@ cython_debug/
 .pypirc
 
 .DS_Store
-*.txt
+/res.txt
+/predictions.txt
 *.png
 test.py
 .vscode/
 wandb/
 trainer_output/
 saved_model/
+old/
