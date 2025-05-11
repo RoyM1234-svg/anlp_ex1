@@ -180,3 +180,4 @@ test.py
 .vscode/
 wandb/
 trainer_output/
+saved_model/
