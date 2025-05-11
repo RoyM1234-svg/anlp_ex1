@@ -64,7 +64,7 @@ def train(
     )
 
     trainer.train()
-    trainer.save_model("saved_model")
+    trainer.save_model(data_args.model_path)
 
     eval_metrics = trainer.evaluate()
 
