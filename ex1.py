@@ -127,8 +127,8 @@ def find_disagreement_examples(best_model_path: str,
 
     with torch.no_grad():
         for sample in validation_set:
-            inputs = tokenizer(sample["sentence1"],
-                               sample["sentence2"],
+            inputs = tokenizer(sample["sentence1"], # type: ignore
+                               sample["sentence2"], # type: ignore
                                truncation=True,
                                return_tensors="pt")
 
@@ -136,18 +136,17 @@ def find_disagreement_examples(best_model_path: str,
             pred3 = torch.argmax(model3(**inputs).logits, dim=1).item()
             gold = sample["label"]  # type: ignore
 
-            # model_2 correct, model_3 wrong
             if pred2 == gold and pred3 != gold:
                 example = {
-                    "sentence1": sample["sentence1"],
-                    "sentence2": sample["sentence2"],
+                    "sentence1": sample["sentence1"], # type: ignore
+                    "sentence2": sample["sentence2"], # type: ignore
                     "gold_label": gold,
                     "model2_pred": pred2,
                     "model3_pred": pred3,
                 }
                 chosen_examples.append(example)
                 str_to_write += (
-                    f"{sample['sentence1']}###{sample['sentence2']}###"
+                    f"{sample['sentence1']}###{sample['sentence2']}###" # type: ignore
                     f"{gold}###{pred2}###{pred3}\n"
                 )
                 if len(chosen_examples) >= num_examples:
