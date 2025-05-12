@@ -110,20 +110,22 @@ def predict(
 def find_disagreement_examples(best_model_path: str,
                                worst_model_path: str,
                                dataset: DatasetDict,
-                               num_examples: int = 10,
+                               num_examples: int = 500,
                                output_path: str | None = "validation_disagreements.txt"):
     
     tokenizer = AutoTokenizer.from_pretrained(best_model_path)
 
-    model2 = AutoModelForSequenceClassification.from_pretrained(best_model_path)
-    model3 = AutoModelForSequenceClassification.from_pretrained(worst_model_path)
+    best_model = AutoModelForSequenceClassification.from_pretrained(best_model_path)
+    worst_model = AutoModelForSequenceClassification.from_pretrained(worst_model_path)
 
-    model2.eval()
-    model3.eval()
+    best_model.eval()
+    worst_model.eval()
 
     validation_set = dataset["validation"]
-    chosen_examples = []
     str_to_write = ""
+
+    count = 0
+    count_1 = 0
 
     with torch.no_grad():
         for sample in validation_set:
@@ -132,31 +134,26 @@ def find_disagreement_examples(best_model_path: str,
                                truncation=True,
                                return_tensors="pt")
 
-            pred2 = torch.argmax(model2(**inputs).logits, dim=1).item()
-            pred3 = torch.argmax(model3(**inputs).logits, dim=1).item()
+            best_pred = torch.argmax(best_model(**inputs).logits, dim=1).item()
+            worst_pred = torch.argmax(worst_model(**inputs).logits, dim=1).item()
             gold = sample["label"]  # type: ignore
 
-            if pred2 == gold and pred3 != gold:
-                example = {
-                    "sentence1": sample["sentence1"], # type: ignore
-                    "sentence2": sample["sentence2"], # type: ignore
-                    "gold_label": gold,
-                    "model2_pred": pred2,
-                    "model3_pred": pred3,
-                }
-                chosen_examples.append(example)
+            if best_pred == gold and worst_pred != gold:
                 str_to_write += (
                     f"{sample['sentence1']}###{sample['sentence2']}###" # type: ignore
-                    f"{gold}###{pred2}###{pred3}\n"
+                    f"{gold}###{best_pred}###{worst_pred}\n"
                 )
-                if len(chosen_examples) >= num_examples:
+                count += 1
+                if gold == 1:
+                    count_1 += 1
+                if count >= num_examples:
                     break
-
+          
     if output_path and str_to_write:
         with open(output_path, "w") as f:
             f.write(str_to_write)
 
-    return chosen_examples
+    print(count_1 / count)
 
 def main():
 
