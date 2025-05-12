@@ -106,8 +106,60 @@ def predict(
         f.write(str_to_write)
 
     return correct / total
-def main():
 
+def find_disagreement_examples(best_model_path: str,
+                               worst_model_path: str,
+                               dataset: DatasetDict,
+                               num_examples: int = 10,
+                               output_path: str | None = "validation_disagreements.txt"):
+    
+    tokenizer = AutoTokenizer.from_pretrained(best_model_path)
+
+    model2 = AutoModelForSequenceClassification.from_pretrained(best_model_path)
+    model3 = AutoModelForSequenceClassification.from_pretrained(worst_model_path)
+
+    model2.eval()
+    model3.eval()
+
+    validation_set = dataset["validation"]
+    chosen_examples = []
+    str_to_write = ""
+
+    with torch.no_grad():
+        for sample in validation_set:
+            inputs = tokenizer(sample["sentence1"],
+                               sample["sentence2"],
+                               truncation=True,
+                               return_tensors="pt")
+
+            pred2 = torch.argmax(model2(**inputs).logits, dim=1).item()
+            pred3 = torch.argmax(model3(**inputs).logits, dim=1).item()
+            gold = sample["label"]  # type: ignore
+
+            # model_2 correct, model_3 wrong
+            if pred2 == gold and pred3 != gold:
+                example = {
+                    "sentence1": sample["sentence1"],
+                    "sentence2": sample["sentence2"],
+                    "gold_label": gold,
+                    "model2_pred": pred2,
+                    "model3_pred": pred3,
+                }
+                chosen_examples.append(example)
+                str_to_write += (
+                    f"{sample['sentence1']}###{sample['sentence2']}###"
+                    f"{gold}###{pred2}###{pred3}\n"
+                )
+                if len(chosen_examples) >= num_examples:
+                    break
+
+    if output_path and str_to_write:
+        with open(output_path, "w") as f:
+            f.write(str_to_write)
+
+    return chosen_examples
+
+def main():
 
     parser = HfArgumentParser((TrainingArguments, DataArguments, AdditionalTrainingArguments)) # type: ignore
     training_args, data_args, additional_training_args = parser.parse_args_into_dataclasses()
@@ -135,6 +187,8 @@ def main():
     if training_args.do_predict:
         accuracy = predict(data_args, dataset) # type: ignore
         print(f"test accuracy : {accuracy}")
+
+    find_disagreement_examples("model_2", "model_3", dataset) # type: ignore
 
     wandb.finish()
 
