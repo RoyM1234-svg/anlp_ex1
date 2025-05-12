@@ -187,7 +187,7 @@ def main():
         accuracy = predict(data_args, dataset) # type: ignore
         print(f"test accuracy : {accuracy}")
 
-    find_disagreement_examples("model_2", "model_3", dataset) # type: ignore
+    # find_disagreement_examples("model_2", "model_3", dataset) # type: ignore
 
     wandb.finish()
 
