@@ -175,7 +175,7 @@ cython_debug/
 
 .DS_Store
 
-/predictions.txt
+
 test.py
 .vscode/
 wandb/
